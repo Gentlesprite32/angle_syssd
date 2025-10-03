@@ -2,19 +2,18 @@
 # Author:Gentlesprite
 # Software:PyCharm
 # Time:2025/9/6 22:16
-# File:main_refresh.py
-# coding=UTF-8
+# File:main.py
 import os
 import sys
 
 from module import console
-from module.stdio import get_cookie, get_push_key
+from module.stdio import get_cookies, get_push_key
 from module.signer import NZSigner
 from module.handler import Handler
 from config import activity_id, flow_id, sd_id
 
 if __name__ == '__main__':
-    cookies = get_cookie()
+    cookies = get_cookies()
     push_key = get_push_key()
     actions_flags = False
     if not cookies:
