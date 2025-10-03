@@ -2,7 +2,8 @@ name: Sign
 
 on:
   schedule:
-    - cron: '17 5 * * *'
+    - cron: '0 16 * * *'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -26,7 +27,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Extract metadata
+      - name: Sign
         shell: bash
         run: |
           python main.py
