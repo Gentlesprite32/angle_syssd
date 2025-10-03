@@ -2,8 +2,7 @@ name: Sign
 
 on:
   schedule:
-    - cron: '0 16 * * *'
-  workflow_dispatch:
+    - cron: '17 5 * * *'
 
 jobs:
   build:
