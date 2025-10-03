@@ -8,7 +8,7 @@ import os
 from module import log
 
 
-def get_cookie():
+def get_cookies():
     return __get_info('cookies.txt', '没有找到cookie,尝试从环境变量中获取...')
 
 
