@@ -18,10 +18,11 @@ from logging.handlers import RotatingFileHandler
 urllib3.disable_warnings()
 LOG_TIME_FORMAT = '[%Y-%m-%d %H:%M:%S]'
 console = Console(log_path=False, log_time_format=LOG_TIME_FORMAT)
+AUTHOR = 'Gentlesprite'
 __version__ = '1.0.0'
 __license__ = 'MIT License'
-__update_date__ = '2025/09/09 15:43:33'
-__copyright__ = f'Copyright (C) 2024-{__update_date__[:4]}'
+__update_date__ = '2026/02/01 21:23:22'
+__copyright__ = f'Copyright (C) 2024-{__update_date__[:4]} {AUTHOR} <https://github.com/Gentlesprite>'
 SOFTWARE_FULL_NAME = 'NZ_Helper_Sign'
 SOFTWARE_SHORT_NAME = 'NHS'
 APPDATA_PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
