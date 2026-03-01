@@ -144,7 +144,7 @@ class NZSigner:
                 )
                 if sign_count != 0:
                     if sign_count in cumulative_day:
-                        p = f'开始领取签到{sign_count}天礼包。'
+                        p = f'"{sign_count}"在{cumulative_day}累计签到天数列表中,开始领取签到{sign_count}天礼包。'
                         log.info(p)
                         console.log(p)
                         self.cumulative_day_gift(
@@ -218,7 +218,7 @@ class NZSigner:
                 console.log(p)
                 self.__process_notify(text='账号已失效。')
         except Exception as e:
-            log.error(f'领取累计签到礼包请求失败: {e}')
+            log.error(f'领取累计签到礼包请求失败,原因"{e}"')
             self.__process_notify(text='领取累计签到礼包失败,请查看运行日志。')
             return None
 
@@ -281,7 +281,7 @@ class NZSigner:
                 console.log(p)
                 self.__process_notify(text='账号已失效。')
         except Exception as e:
-            log.error(f'领取限定日期礼包请求失败: {e}')
+            log.error(f'领取限定日期礼包请求失败,原因"{e}"')
             self.__process_notify(text='领取限定日期礼包失败,请查看运行日志。')
             return None
 
@@ -350,8 +350,8 @@ class NZSigner:
                 console.log(p)
                 self.__process_notify(text='账号已失效。')
         except Exception as e:
-            log.error(f'签到请求失败: {e}')
-            self.__process_notify(text='签到失败,请查看运行日志。')
+            log.error(f'领取签到礼包请求失败,原因"{e}"')
+            self.__process_notify(text='领取签到礼包请求失败,请查看运行日志。')
             return None
         handler(
             func=self.sign,
