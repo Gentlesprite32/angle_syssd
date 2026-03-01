@@ -29,16 +29,16 @@ from .util import (
 
 class NZSigner:
     def __init__(
-        self,
-        cookies: str,
-        push_key: Union[str, None] = None,
-        activity_id: Optional[str] = None,
-        flow_id: Optional[str] = None,
-        sd_id: Optional[str] = None,
-        special_date: Optional[list] = None,
-        special_date_flow_id: Optional[str] = None,
-        cumulative_day: Optional[list] = None,
-        cumulative_day_flow_id: Optional[str] = None
+            self,
+            cookies: str,
+            push_key: Union[str, None] = None,
+            activity_id: Optional[str] = None,
+            flow_id: Optional[str] = None,
+            sd_id: Optional[str] = None,
+            special_date: Optional[list] = None,
+            special_date_flow_id: Optional[str] = None,
+            cumulative_day: Optional[list] = None,
+            cumulative_day_flow_id: Optional[str] = None
     ):
         self.cookies = cookies
         self.session = requests.Session()
@@ -131,25 +131,32 @@ class NZSigner:
             log.info(response_data) if response_data else None
             package_name = response_data.get('modRet', {}).get('jData', {}).get('sPackageName', '')
             p = f'[{token_params.get("roleName", "")}][{token_params.get("areaName", "")}]:'
-            if package_name:
+            if package_name and isinstance(package_name, str):
                 p += package_name
                 log.info(p)
                 console.log(p)
                 self.notify(text=success_text, desp=package_name if desp_text is None else desp_text)
                 return True
 
+            s_msg = response_data.get('flowRet', {}).get('sMsg')
+
+            if s_msg and isinstance(s_msg, str):
+                p += f'{s_msg}。'
+                log.info(p)
+                console.log(p)
+                return False
+
             msg = response_data.get('msg')
-            if msg:
+            if msg and isinstance(msg, str):
                 p += msg
                 log.info(p)
                 console.log(p)
                 return False
-            else:
-                p = response_data
-                log.info(p)
-                console.log(p)
-                self.notify(text='账号已失效。')
-                return False
+
+            log.info(response_data)
+            console.log(response_data)
+            self.notify(text='账号已失效。')
+            return False
         except Exception as e:
             log.error(f'{error_prefix}请求失败,原因"{e}"')
             self.notify(text=f'{error_prefix}失败,请查看运行日志。')
