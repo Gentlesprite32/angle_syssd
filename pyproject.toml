@@ -1,0 +1,13 @@
+[project]
+name = "Nz_Helper_Sign"
+authors = [{name = "Gentlesprite", email = "Gentlesprites@outlook.com"}]
+version = "1.0.0"
+description = "逆战助手自动签到工具。"
+readme = "README.md"
+requires-python = ">=3.13"
+license = "MIT"
+dependencies = [
+    "requests==2.32.4",
+    "rich==14.2.0",
+    "urllib3==2.6.0",
+]
