@@ -20,7 +20,9 @@ from config import (
     flow_id,
     sd_id,
     special_date,
-    special_date_flow_id
+    special_date_flow_id,
+    cumulative_day,
+    cumulative_day_flow_id
 )
 
 if __name__ == '__main__':
@@ -46,7 +48,9 @@ if __name__ == '__main__':
             flow_id=flow_id,
             sd_id=sd_id,
             special_date=special_date,
-            special_date_flow_id=special_date_flow_id
+            special_date_flow_id=special_date_flow_id,
+            cumulative_day=cumulative_day,
+            cumulative_day_flow_id=cumulative_day_flow_id
         )
         if not PARSE_ARGS.loop:
             sys.exit()
