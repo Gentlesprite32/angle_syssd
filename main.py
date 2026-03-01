@@ -30,8 +30,9 @@ if __name__ == '__main__':
     if not push_key:
         console.log('没有找到PUSH_KEY,领取信息不会进行推送。')
     try:
-        signer = NZSigner(cookies=cookies, push_key=push_key)
-        signer.sign(
+        signer = NZSigner(
+            cookies=cookies,
+            push_key=push_key,
             activity_id=activity_id,
             flow_id=flow_id,
             sd_id=sd_id,
@@ -40,5 +41,6 @@ if __name__ == '__main__':
             cumulative_day=cumulative_day,
             cumulative_day_flow_id=cumulative_day_flow_id
         )
+        signer.sign()
     except KeyboardInterrupt:
         console.log('键盘中断。')
