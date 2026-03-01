@@ -2,7 +2,7 @@ name: Sign
 
 on:
   schedule:
-    - cron: '40 1 * * *'
+    - cron: '17 5 * * *'
   workflow_dispatch:
 
 jobs:
