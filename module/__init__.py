@@ -1,3 +1,8 @@
+# coding=UTF-8
+# Author:Gentlesprite
+# Software:PyCharm
+# Time:2026/3/2 1:27
+# File:__init__.py
 import os
 import sys
 import time
@@ -7,7 +12,7 @@ try:
         os.environ['TZ'] = 'Asia/Shanghai'
         time.tzset()
 except Exception as e:
-    print(f'时区设置失败,请手动设置后重试,原因"{e}"')
+    print(f'时区设置失败,请手动设置后重试,原因:"{e}"')
 
 import logging
 import urllib3
