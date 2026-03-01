@@ -9,7 +9,6 @@ from functools import wraps
 from datetime import datetime
 from typing import (
     Union,
-    Callable,
     Optional
 )
 
@@ -20,19 +19,22 @@ from urllib.parse import (
     parse_qs
 )
 
-from module import log, console
-from module.notify import sc_send
-from module.util import safe_index
+from . import log, console
+from .util import (
+    safe_index,
+    schedule_task,
+    sc_send
+)
 
 
 class NZSigner:
     def __init__(self, cookies: str, push_key: Union[str, None] = None):
         self.cookies = cookies
         self.session = requests.Session()
-        self.__update_cookies()
+        self.update_cookies()
         self.push_key = push_key
 
-    def __update_cookies(self):
+    def update_cookies(self):
         """更新会话的Cookies"""
         _cookies = {}
         for c in self.cookies.split(';'):
@@ -41,13 +43,100 @@ class NZSigner:
                 _cookies[k] = v
         self.session.cookies.update(_cookies)
 
-    def __parse_token_params(self) -> dict:
+    def parse_token_params(self) -> dict:
         token_params_str = unquote_plus(unquote_plus(self.session.cookies.get('tokenParams', '')))
         return {k: v[0] for k, v in parse_qs(token_params_str).items()}
 
-    def __process_notify(self, text, desp=''):
-        if self.push_key:
-            sc_send(text=text, desp=desp, key=self.push_key)
+    def notify(self, text, desp=''):
+        sc_send(text=text, desp=desp, key=self.push_key) if self.push_key else None
+
+    def get_request_data(self, flow_id: str, num: str = '-1') -> dict:
+        """构造请求数据。"""
+        token_params = self.parse_token_params()
+        return {
+            'appid': '1104904086',
+            'num': num,
+            'userId': token_params.get('userId', ''),
+            'tokenId': token_params.get('token', ''),
+            'iActivityId': '',  # 由调用方填充
+            'iFlowId': flow_id,
+            'g_tk': '1842395457',
+            'e_code': '0',
+            'g_code': '0',
+            'eas_url': 'http://nz.qq.com/cp/a20240816septzs/',
+            'eas_refer': 'http://noreferrer/?reqid=41d32ba3-a767-416e-bc52-462a43385af7',
+            'version': '27',
+            'sServiceDepartment': 'group_a',
+            'sServiceType': 'nz'
+        }
+
+    def get_request_url(self, activity_id: str, flow_id: str, sd_id: str) -> str:
+        """构造请求URL。"""
+        current_timestamp = str(int(time.time()))
+        token_params = self.parse_token_params()
+        return f'https://comm.ams.game.qq.com/ams/ame/amesvr?ameVersion=0.3&sServiceType=nz&iActivityId={activity_id}&sServiceDepartment=group_a&sSDID={sd_id}&sMiloTag=AMS-MILO-{activity_id}-{flow_id}-{token_params.get("userId", "")}-{current_timestamp + "287"}-0poxQT&_={current_timestamp + "288"}'
+
+    @property
+    def headers(self) -> dict:
+        """构造请求头。"""
+        return {
+            'Host': 'comm.ams.game.qq.com',
+            'Accept': '*/*',
+            'Accept-Language': 'zh-CN,zh-Hans;q=0.9',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Origin': 'https://nz.qq.com',
+            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 GH_QQConnect GameHelper_1008/3.15.30032.2103150032',
+            'Referer': 'https://nz.qq.com/'
+        }
+
+    def request(
+            self,
+            activity_id: str,
+            flow_id: str,
+            sd_id: str,
+            num: str,
+            success_text: str,
+            error_prefix: str,
+            desp_text: Optional[str] = None
+    ) -> bool:
+        """发送请求并处理响应。"""
+        self.update_cookies()
+        token_params = self.parse_token_params()
+
+        data = self.get_request_data(flow_id, num)
+        data['iActivityId'] = activity_id
+        url = self.get_request_url(activity_id, flow_id, sd_id)
+
+        try:
+            res = self.session.post(url, headers=self.headers, data=data, verify=False)
+            response_data = res.json()
+            log.info(response_data) if response_data else None
+            package_name = response_data.get('modRet', {}).get('jData', {}).get('sPackageName', '')
+            p = f'[{token_params.get("roleName", "")}][{token_params.get("areaName", "")}]:'
+            log.info(response_data)
+            if package_name:
+                p += package_name
+                log.info(p)
+                console.log(p)
+                self.notify(text=success_text, desp=package_name if desp_text is None else desp_text)
+                return True
+
+            msg = response_data.get('msg')
+            if msg:
+                p += msg
+                log.info(p)
+                console.log(p)
+                return False
+            else:
+                p = response_data
+                log.info(p)
+                console.log(p)
+                self.notify(text='账号已失效。')
+                return False
+        except Exception as e:
+            log.error(f'{error_prefix}请求失败,原因"{e}"')
+            self.notify(text=f'{error_prefix}失败,请查看运行日志。')
+            return False
 
     def get_sign_count(
             self,
@@ -56,40 +145,15 @@ class NZSigner:
             sd_id: str
     ) -> int:
         try:
-            self.__update_cookies()
-            current_timestamp = str(int(time.time()))
-            token_params = self.__parse_token_params()
-            data = {
-                'appid': '1104904086',
-                'num': '1',
-                'userId': token_params.get('userId', ''),
-                'tokenId': token_params.get('token', ''),
-                'iActivityId': activity_id,
-                'iFlowId': cumulative_day_flow_id,
-                'g_tk': '1842395457',
-                'e_code': '0',
-                'g_code': '0',
-                'eas_url': 'http://nz.qq.com/cp/a20240816septzs/',
-                'eas_refer': 'http://noreferrer/?reqid=41d32ba3-a767-416e-bc52-462a43385af7',
-                'version': '27',
-                'sServiceDepartment': 'group_a',
-                'sServiceType': 'nz'
-            }
+            self.update_cookies()
 
-            url = f'https://comm.ams.game.qq.com/ams/ame/amesvr?ameVersion=0.3&sServiceType=nz&iActivityId={activity_id}&sServiceDepartment=group_a&sSDID={sd_id}&sMiloTag=AMS-MILO-{activity_id}-{cumulative_day_flow_id}-{token_params.get("userId", "")}-{current_timestamp + "287"}-0poxQT&_={current_timestamp + "288"}'
+            data = self.get_request_data(cumulative_day_flow_id, '1')
+            data['iActivityId'] = activity_id
+            url = self.get_request_url(activity_id, cumulative_day_flow_id, sd_id)
 
-            headers = {
-                'Host': 'comm.ams.game.qq.com',
-                'Accept': '*/*',
-                'Accept-Language': 'zh-CN,zh-Hans;q=0.9',
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Origin': 'https://nz.qq.com',
-                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 GH_QQConnect GameHelper_1008/3.15.30032.2103150032',
-                'Referer': 'https://nz.qq.com/'
-            }
-
-            res = self.session.post(url, headers=headers, data=data, verify=False)
+            res = self.session.post(url, headers=self.headers, data=data, verify=False)
             response_data = res.json()
+            log.debug(response_data) if response_data else None
             sign_data = response_data.get('failedRet')
             if not isinstance(sign_data, dict):
                 return 0
@@ -166,61 +230,22 @@ class NZSigner:
             cumulative_day: list,
             sign_count: int
     ):
-        self.__update_cookies()
-        current_timestamp = str(int(time.time()))
-        token_params = self.__parse_token_params()
-        data = {
-            'appid': '1104904086',
-            'num': safe_index(obj=cumulative_day, value=sign_count, start=1),
-            'userId': token_params.get('userId', ''),
-            'tokenId': token_params.get('token', ''),
-            'iActivityId': activity_id,
-            'iFlowId': cumulative_day_flow_id,
-            'g_tk': '1842395457',
-            'e_code': '0',
-            'g_code': '0',
-            'eas_url': 'http://nz.qq.com/cp/a20240816septzs/',
-            'eas_refer': 'http://noreferrer/?reqid=41d32ba3-a767-416e-bc52-462a43385af7',
-            'version': '27',
-            'sServiceDepartment': 'group_a',
-            'sServiceType': 'nz'
-        }
-
-        url = f'https://comm.ams.game.qq.com/ams/ame/amesvr?ameVersion=0.3&sServiceType=nz&iActivityId={activity_id}&sServiceDepartment=group_a&sSDID={sd_id}&sMiloTag=AMS-MILO-{activity_id}-{cumulative_day_flow_id}-{token_params.get("userId", "")}-{current_timestamp + "287"}-0poxQT&_={current_timestamp + "288"}'
-
-        headers = {
-            'Host': 'comm.ams.game.qq.com',
-            'Accept': '*/*',
-            'Accept-Language': 'zh-CN,zh-Hans;q=0.9',
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Origin': 'https://nz.qq.com',
-            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 GH_QQConnect GameHelper_1008/3.15.30032.2103150032',
-            'Referer': 'https://nz.qq.com/'
-        }
-
-        try:
-            res = self.session.post(url, headers=headers, data=data, verify=False)
-            response_data = res.json()
-            response_len = len(response_data)
-            if response_len == 4:  # 签到天数不够。
-                p = f'[{token_params.get("roleName", "")}][{token_params.get("areaName", "")}]:{response_data.get("msg")}'
-                log.info(p)
-                console.log(p)
-            elif response_len > 4:  # 累计签到礼包领取成功。
-                package_name = response_data.get('modRet', {}).get('jData', {}).get('sPackageName', '')
-                p = f'[{token_params.get("roleName", "")}][{token_params.get("areaName", "")}]:累计签到礼包领取成功!{package_name}'
-                log.info(p)
-                console.log(p)
-                self.__process_notify(text=f'{cumulative_day_flow_id}累计签到礼包领取成功。', desp=package_name)
-            else:
-                p = f'{response_data},长度:{response_len}'
-                log.info(p)
-                console.log(p)
-                self.__process_notify(text='账号已失效。')
-        except Exception as e:
-            log.error(f'领取累计签到礼包请求失败,原因"{e}"')
-            self.__process_notify(text='领取累计签到礼包失败,请查看运行日志。')
-            return None
+        num = str(safe_index(obj=cumulative_day, value=sign_count, start=1))
+        log.info(
+            f'领取累计签到礼包,'
+            f'num:{num},'
+            f'flow_id:{cumulative_day_flow_id},'
+            f'sign_count:{sign_count},'
+            f'cumulative_day:{cumulative_day}。'
+        )
+        self.request(
+            activity_id=activity_id,
+            flow_id=cumulative_day_flow_id,
+            sd_id=sd_id,
+            num=num,
+            success_text=f'{cumulative_day_flow_id}累计签到礼包领取成功。',
+            error_prefix='领取累计签到礼包'
+        )
 
     def special_date_gift(
             self,
@@ -229,62 +254,25 @@ class NZSigner:
             sd_id: str,
             special_date: Optional[list] = None
     ):
-        self.__update_cookies()
-        current_timestamp = str(int(time.time()))
-        token_params = self.__parse_token_params()
-        data = {
-            'appid': '1104904086',
-            'num': str(safe_index(obj=special_date, value=str(datetime.now().date()), start=1)),
-            'userId': token_params.get('userId', ''),
-            'tokenId': token_params.get('token', ''),
-            'iActivityId': activity_id,
-            'iFlowId': special_date_flow_id,
-            'g_tk': '1842395457',
-            'e_code': '0',
-            'g_code': '0',
-            'eas_url': 'http://nz.qq.com/cp/a20240816septzs/',
-            'eas_refer': 'http://noreferrer/?reqid=41d32ba3-a767-416e-bc52-462a43385af7',
-            'version': '27',
-            'sServiceDepartment': 'group_a',
-            'sServiceType': 'nz'
-        }
+        current_date = str(datetime.now().date())
+        num = str(safe_index(obj=special_date, value=current_date, start=1))
+        log.info(
+            f'领取限定日期礼包,'
+            f'num:{num},'
+            f'flow_id:{special_date_flow_id},'
+            f'current_date:{current_date},'
+            f'special_date:{special_date}。'
+        )
+        self.request(
+            activity_id=activity_id,
+            flow_id=special_date_flow_id,
+            sd_id=sd_id,
+            num=num,
+            success_text=f'{special_date}限定日期礼包领取成功。',
+            error_prefix='领取限定日期礼包'
+        )
 
-        url = f'https://comm.ams.game.qq.com/ams/ame/amesvr?ameVersion=0.3&sServiceType=nz&iActivityId={activity_id}&sServiceDepartment=group_a&sSDID={sd_id}&sMiloTag=AMS-MILO-{activity_id}-{special_date_flow_id}-{token_params.get("userId", "")}-{current_timestamp + "287"}-0poxQT&_={current_timestamp + "288"}'
-
-        headers = {
-            'Host': 'comm.ams.game.qq.com',
-            'Accept': '*/*',
-            'Accept-Language': 'zh-CN,zh-Hans;q=0.9',
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Origin': 'https://nz.qq.com',
-            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 GH_QQConnect GameHelper_1008/3.15.30032.2103150032',
-            'Referer': 'https://nz.qq.com/'
-        }
-
-        try:
-            res = self.session.post(url, headers=headers, data=data, verify=False)
-            response_data = res.json()
-            response_len = len(response_data)
-            if response_len == 4:  # 不在领取时间内。
-                p = f'[{token_params.get("roleName", "")}][{token_params.get("areaName", "")}]:{response_data.get("msg")}'
-                log.info(p)
-                console.log(p)
-            elif response_len > 4:  # 限定日期礼包领取成功。
-                package_name = response_data.get('modRet', {}).get('jData', {}).get('sPackageName', '')
-                p = f'[{token_params.get("roleName", "")}][{token_params.get("areaName", "")}]:限定日期礼包领取成功!{package_name}'
-                log.info(p)
-                console.log(p)
-                self.__process_notify(text=f'{special_date}限定日期礼包领取成功。', desp=package_name)
-            else:
-                p = f'{response_data},长度:{response_len}'
-                log.info(p)
-                console.log(p)
-                self.__process_notify(text='账号已失效。')
-        except Exception as e:
-            log.error(f'领取限定日期礼包请求失败,原因"{e}"')
-            self.__process_notify(text='领取限定日期礼包失败,请查看运行日志。')
-            return None
-
+    @schedule_task(['00:00:00'])
     @check_current_date
     def sign(
             self,
@@ -294,73 +282,13 @@ class NZSigner:
             special_date: Optional[list] = None,
             special_date_flow_id: Optional[str] = None,
             cumulative_day: Optional[list] = None,
-            cumulative_day_flow_id: Optional[str] = None,
-            handler: Optional[Callable] = None
+            cumulative_day_flow_id: Optional[str] = None
     ):
-        self.__update_cookies()
-        current_timestamp = str(int(time.time()))
-        token_params = self.__parse_token_params()
-
-        data = {
-            'appid': '1104904086',
-            'num': '-1',
-            'userId': token_params.get('userId', ''),
-            'tokenId': token_params.get('token', ''),
-            'iActivityId': activity_id,
-            'iFlowId': flow_id,
-            'g_tk': '1842395457',
-            'e_code': '0',
-            'g_code': '0',
-            'eas_url': 'http://nz.qq.com/cp/a20240816septzs/',
-            'eas_refer': 'http://noreferrer/?reqid=41d32ba3-a767-416e-bc52-462a43385af7',
-            'version': '27',
-            'sServiceDepartment': 'group_a',
-            'sServiceType': 'nz'
-        }
-
-        url = f'https://comm.ams.game.qq.com/ams/ame/amesvr?ameVersion=0.3&sServiceType=nz&iActivityId={activity_id}&sServiceDepartment=group_a&sSDID={sd_id}&sMiloTag=AMS-MILO-{activity_id}-{flow_id}-{token_params.get("userId", "")}-{current_timestamp + "287"}-0poxQT&_={current_timestamp + "288"}'
-
-        headers = {
-            'Host': 'comm.ams.game.qq.com',
-            'Accept': '*/*',
-            'Accept-Language': 'zh-CN,zh-Hans;q=0.9',
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Origin': 'https://nz.qq.com',
-            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 GH_QQConnect GameHelper_1008/3.15.30032.2103150032',
-            'Referer': 'https://nz.qq.com/'
-        }
-
-        try:
-            res = self.session.post(url, headers=headers, data=data, verify=False)
-            response_data = res.json()
-            response_len = len(response_data)
-            if response_len == 4:  # 已签到。
-                p = f'[{token_params.get("roleName", "")}][{token_params.get("areaName", "")}]:{response_data.get("msg")}'
-                log.info(p)
-                console.log(p)
-            elif response_len > 4:  # 签到成功。
-                package_name = response_data.get('modRet', {}).get('jData', {}).get('sPackageName', '')
-                p = f'[{token_params.get("roleName", "")}][{token_params.get("areaName", "")}]:签到成功!{package_name}'
-                log.info(p)
-                console.log(p)
-                self.__process_notify(text='签到成功。', desp=package_name)
-            else:
-                p = f'{response_data},长度:{response_len}'
-                log.info(p)
-                console.log(p)
-                self.__process_notify(text='账号已失效。')
-        except Exception as e:
-            log.error(f'领取签到礼包请求失败,原因"{e}"')
-            self.__process_notify(text='领取签到礼包请求失败,请查看运行日志。')
-            return None
-        handler(
-            func=self.sign,
+        self.request(
             activity_id=activity_id,
             flow_id=flow_id,
             sd_id=sd_id,
-            special_date=special_date,
-            special_date_flow_id=special_date_flow_id,
-            cumulative_day=cumulative_day,
-            cumulative_day_flow_id=cumulative_day_flow_id,
-            handler=handler
-        ) if handler else None
+            num='-1',
+            success_text='签到成功。',
+            error_prefix='领取签到礼包'
+        )
