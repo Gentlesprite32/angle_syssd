@@ -56,14 +56,10 @@ def schedule_task(time_str: Union[str, list] = '00:00:00'):
 
             for t in time_list:
                 schedule.every().day.at(t).do(func, *args, **kwargs)
-
-            p = f'开始执行循环任务,当前时间:{datetime.now()}。'
             time_str_display = '、'.join(time_list)
-            p2 = f'任务将在每天{time_str_display}执行。'
+            p = f'当前时间:{datetime.now()},任务将在每天{time_str_display}执行。'
             log.info(p)
-            log.info(p2)
             console.log(p)
-            console.log(p2)
 
             with Live(refresh_per_second=1, console=console) as live:
                 while True:
