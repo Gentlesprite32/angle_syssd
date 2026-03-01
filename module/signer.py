@@ -28,11 +28,29 @@ from .util import (
 
 
 class NZSigner:
-    def __init__(self, cookies: str, push_key: Union[str, None] = None):
+    def __init__(
+        self,
+        cookies: str,
+        push_key: Union[str, None] = None,
+        activity_id: Optional[str] = None,
+        flow_id: Optional[str] = None,
+        sd_id: Optional[str] = None,
+        special_date: Optional[list] = None,
+        special_date_flow_id: Optional[str] = None,
+        cumulative_day: Optional[list] = None,
+        cumulative_day_flow_id: Optional[str] = None
+    ):
         self.cookies = cookies
         self.session = requests.Session()
         self.update_cookies()
         self.push_key = push_key
+        self.activity_id = activity_id
+        self.flow_id = flow_id
+        self.sd_id = sd_id
+        self.special_date = special_date
+        self.special_date_flow_id = special_date_flow_id
+        self.cumulative_day = cumulative_day
+        self.cumulative_day_flow_id = cumulative_day_flow_id
 
     def update_cookies(self):
         """更新会话的Cookies"""
@@ -113,7 +131,6 @@ class NZSigner:
             log.info(response_data) if response_data else None
             package_name = response_data.get('modRet', {}).get('jData', {}).get('sPackageName', '')
             p = f'[{token_params.get("roleName", "")}][{token_params.get("areaName", "")}]:'
-            log.info(response_data)
             if package_name:
                 p += package_name
                 log.info(p)
@@ -138,18 +155,13 @@ class NZSigner:
             self.notify(text=f'{error_prefix}失败,请查看运行日志。')
             return False
 
-    def get_sign_count(
-            self,
-            activity_id: str,
-            cumulative_day_flow_id: str,
-            sd_id: str
-    ) -> int:
+    def get_sign_count(self) -> int:
         try:
             self.update_cookies()
 
-            data = self.get_request_data(cumulative_day_flow_id, '1')
-            data['iActivityId'] = activity_id
-            url = self.get_request_url(activity_id, cumulative_day_flow_id, sd_id)
+            data = self.get_request_data(self.cumulative_day_flow_id, '1')
+            data['iActivityId'] = self.activity_id
+            url = self.get_request_url(self.activity_id, self.cumulative_day_flow_id, self.sd_id)
 
             res = self.session.post(url, headers=self.headers, data=data, verify=False)
             response_data = res.json()
@@ -181,113 +193,70 @@ class NZSigner:
         @wraps(func)
         def inner(*args, **kwargs):
             result = func(*args, **kwargs)
-            activity_id: str = kwargs.get('activity_id')
-            sd_id: str = kwargs.get('sd_id')
-            special_date: Union[str, None] = kwargs.get('special_date')
-            special_date_flow_id: Union[str, None] = kwargs.get('special_date_flow_id')
-            cumulative_day: Union[list, None] = kwargs.get('cumulative_day')
-            cumulative_day_flow_id: Union[str, None] = kwargs.get('cumulative_day_flow_id')
-            current_date: str = str(datetime.now().date())
             self: NZSigner = args[0]
-            if all((special_date, special_date_flow_id)):
-                if current_date in special_date:
-                    p = f'"{current_date}"在{special_date}限定日期列表中,开始领取限定日期礼包。'
+            current_date: str = str(datetime.now().date())
+            if all((self.special_date, self.special_date_flow_id)):
+                if current_date in self.special_date:
+                    p = f'"{current_date}"在{self.special_date}限定日期列表中,开始领取限定日期礼包。'
                     log.info(p)
                     console.log(p)
-                    self.special_date_gift(
-                        activity_id=activity_id,
-                        special_date_flow_id=special_date_flow_id,
-                        sd_id=sd_id,
-                        special_date=special_date
-                    )
-            if all((cumulative_day, cumulative_day_flow_id)):
-                sign_count: int = self.get_sign_count(
-                    activity_id=activity_id,
-                    cumulative_day_flow_id=cumulative_day_flow_id,
-                    sd_id=sd_id
-                )
+                    self.special_date_gift()
+            if all((self.cumulative_day, self.cumulative_day_flow_id)):
+                sign_count: int = self.get_sign_count()
                 if sign_count != 0:
-                    if sign_count in cumulative_day:
-                        p = f'"{sign_count}"在{cumulative_day}累计签到天数列表中,开始领取签到{sign_count}天礼包。'
+                    if sign_count in self.cumulative_day:
+                        p = f'"{sign_count}"在{self.cumulative_day}累计签到天数列表中,开始领取签到{sign_count}天礼包。'
                         log.info(p)
                         console.log(p)
-                        self.cumulative_day_gift(
-                            activity_id=activity_id,
-                            cumulative_day_flow_id=cumulative_day_flow_id,
-                            sd_id=sd_id,
-                            cumulative_day=cumulative_day,
-                            sign_count=sign_count
-                        )
+                        self.cumulative_day_gift(sign_count=sign_count)
             return result
 
         return inner
 
-    def cumulative_day_gift(
-            self,
-            activity_id: str,
-            cumulative_day_flow_id: str,
-            sd_id: str,
-            cumulative_day: list,
-            sign_count: int
-    ):
-        num = str(safe_index(obj=cumulative_day, value=sign_count, start=1))
+    def cumulative_day_gift(self, sign_count: int):
+        num = str(safe_index(obj=self.cumulative_day, value=sign_count, start=1))
         log.info(
             f'领取累计签到礼包,'
             f'num:{num},'
-            f'flow_id:{cumulative_day_flow_id},'
+            f'flow_id:{self.cumulative_day_flow_id},'
             f'sign_count:{sign_count},'
-            f'cumulative_day:{cumulative_day}。'
+            f'cumulative_day:{self.cumulative_day}。'
         )
         self.request(
-            activity_id=activity_id,
-            flow_id=cumulative_day_flow_id,
-            sd_id=sd_id,
+            activity_id=self.activity_id,
+            flow_id=self.cumulative_day_flow_id,
+            sd_id=self.sd_id,
             num=num,
-            success_text=f'{cumulative_day_flow_id}累计签到礼包领取成功。',
+            success_text=f'{self.cumulative_day_flow_id}累计签到礼包领取成功。',
             error_prefix='领取累计签到礼包'
         )
 
-    def special_date_gift(
-            self,
-            activity_id: str,
-            special_date_flow_id: str,
-            sd_id: str,
-            special_date: Optional[list] = None
-    ):
+    def special_date_gift(self):
         current_date = str(datetime.now().date())
-        num = str(safe_index(obj=special_date, value=current_date, start=1))
+        num = str(safe_index(obj=self.special_date, value=current_date, start=1))
         log.info(
             f'领取限定日期礼包,'
             f'num:{num},'
-            f'flow_id:{special_date_flow_id},'
+            f'flow_id:{self.special_date_flow_id},'
             f'current_date:{current_date},'
-            f'special_date:{special_date}。'
+            f'special_date:{self.special_date}。'
         )
         self.request(
-            activity_id=activity_id,
-            flow_id=special_date_flow_id,
-            sd_id=sd_id,
+            activity_id=self.activity_id,
+            flow_id=self.special_date_flow_id,
+            sd_id=self.sd_id,
             num=num,
-            success_text=f'{special_date}限定日期礼包领取成功。',
+            success_text=f'{self.special_date}限定日期礼包领取成功。',
             error_prefix='领取限定日期礼包'
         )
 
     @schedule_task(['00:00:00'])
     @check_current_date
-    def sign(
-            self,
-            activity_id: str,
-            flow_id: str,
-            sd_id: str,
-            special_date: Optional[list] = None,
-            special_date_flow_id: Optional[str] = None,
-            cumulative_day: Optional[list] = None,
-            cumulative_day_flow_id: Optional[str] = None
-    ):
+    def sign(self):
         self.request(
-            activity_id=activity_id,
-            flow_id=flow_id,
-            sd_id=sd_id,
+            activity_id=self.activity_id,
+            flow_id=self.flow_id,
+            sd_id=self.sd_id,
             num='-1',
             success_text='签到成功。',
             error_prefix='领取签到礼包'
