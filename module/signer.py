@@ -31,8 +31,8 @@ class NZSigner:
     def __init__(
             self,
             cookies: str,
-            activity_id: str = None,
-            flow_id: str = None,
+            activity_id: str,
+            flow_id: str,
             push_key: Optional[str] = None,
             sd_id: Optional[str] = '8820a53e535dd3ce12edfeac13288eec',
             special_date: Optional[list] = None,
