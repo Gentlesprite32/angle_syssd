@@ -114,8 +114,7 @@ class NZSigner:
             sd_id: str,
             num: str,
             success_text: str,
-            error_prefix: str,
-            desp_text: Optional[str] = None
+            error_prefix: str
     ) -> bool:
         """发送请求并处理响应。"""
         self.update_cookies()
@@ -135,7 +134,7 @@ class NZSigner:
                 p += package_name
                 log.info(p)
                 console.log(p)
-                self.notify(text=success_text, desp=package_name if desp_text is None else desp_text)
+                self.notify(text=success_text, desp=package_name)
                 return True
 
             s_msg = response_data.get('flowRet', {}).get('sMsg')
@@ -234,7 +233,7 @@ class NZSigner:
             flow_id=self.cumulative_day_flow_id,
             sd_id=self.sd_id,
             num=num,
-            success_text=f'{self.cumulative_day_flow_id}累计签到礼包领取成功。',
+            success_text=f'累计签到{sign_count}天礼包领取成功。',
             error_prefix='领取累计签到礼包'
         )
 
@@ -253,7 +252,7 @@ class NZSigner:
             flow_id=self.special_date_flow_id,
             sd_id=self.sd_id,
             num=num,
-            success_text=f'{self.special_date}限定日期礼包领取成功。',
+            success_text=f'{current_date}限定日期礼包领取成功。',
             error_prefix='领取限定日期礼包'
         )
 
