@@ -31,10 +31,10 @@ class NZSigner:
     def __init__(
             self,
             cookies: str,
-            push_key: Union[str, None] = None,
-            activity_id: Optional[str] = None,
-            flow_id: Optional[str] = None,
-            sd_id: Optional[str] = None,
+            activity_id: str = None,
+            flow_id: str = None,
+            push_key: Optional[str] = None,
+            sd_id: Optional[str] = '8820a53e535dd3ce12edfeac13288eec',
             special_date: Optional[list] = None,
             special_date_flow_id: Optional[str] = None,
             cumulative_day: Optional[list] = None,
@@ -43,9 +43,9 @@ class NZSigner:
         self.cookies = cookies
         self.session = requests.Session()
         self.update_cookies()
-        self.push_key = push_key
         self.activity_id = activity_id
         self.flow_id = flow_id
+        self.push_key = push_key
         self.sd_id = sd_id
         self.special_date = special_date
         self.special_date_flow_id = special_date_flow_id
