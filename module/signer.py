@@ -7,10 +7,7 @@ import time
 
 from functools import wraps
 from datetime import datetime
-from typing import (
-    Union,
-    Optional
-)
+from typing import Optional
 
 import requests
 import contextlib
