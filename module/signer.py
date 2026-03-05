@@ -111,7 +111,8 @@ class NZSigner:
             sd_id: str,
             num: str,
             success_text: str,
-            error_prefix: str
+            error_prefix: str,
+            no_package_name: Optional[bool] = False
     ) -> bool:
         """发送请求并处理响应。"""
         self.update_cookies()
@@ -140,6 +141,9 @@ class NZSigner:
                 p += f'{s_msg}。'
                 log.info(p)
                 console.log(p)
+                if no_package_name:
+                    self.notify(text=success_text)
+                    return True
                 return False
 
             msg = response_data.get('msg')
@@ -162,7 +166,7 @@ class NZSigner:
         try:
             self.update_cookies()
 
-            data = self.get_request_data(self.cumulative_day_flow_id, '1')
+            data = self.get_request_data(self.cumulative_day_flow_id, str(len(self.cumulative_day)))
             data['iActivityId'] = self.activity_id
             url = self.get_request_url(self.activity_id, self.cumulative_day_flow_id, self.sd_id)
 
@@ -170,8 +174,8 @@ class NZSigner:
             response_data = res.json()
             log.debug(response_data) if response_data else None
             sign_data = response_data.get('failedRet')
-            if not isinstance(sign_data, dict):
-                return 0
+            if not isinstance(sign_data, dict):  # 最后一个礼包领取成功。
+                return self.cumulative_day[-1]
             cond_rets = []
             for data in sign_data.values():
                 try:
@@ -206,12 +210,21 @@ class NZSigner:
                     self.special_date_gift()
             if all((self.cumulative_day, self.cumulative_day_flow_id)):
                 sign_count: int = self.get_sign_count()
-                if sign_count != 0:
+                if sign_count == self.cumulative_day[-1]:
+                    p = f'"{sign_count}"在{self.cumulative_day}累计签到天数列表中,开始领取签到{sign_count}天礼包。'
+                    log.info(p)
+                    console.log(p)
+                    self.notify(text=f'累计签到{sign_count}天礼包领取成功。')
+                elif sign_count != 0:
                     if sign_count in self.cumulative_day:
                         p = f'"{sign_count}"在{self.cumulative_day}累计签到天数列表中,开始领取签到{sign_count}天礼包。'
                         log.info(p)
                         console.log(p)
                         self.cumulative_day_gift(sign_count=sign_count)
+                else:
+                    p = '没有获取到签到天数,累计签到天数礼包可能已全部领取完成。'
+                    log.info(p)
+                    console.log(p)
             return result
 
         return inner
@@ -219,7 +232,7 @@ class NZSigner:
     def cumulative_day_gift(self, sign_count: int):
         num = str(safe_index(obj=self.cumulative_day, value=sign_count, start=1))
         log.info(
-            f'领取累计签到礼包,'
+            '领取累计签到礼包,'
             f'num:{num},'
             f'flow_id:{self.cumulative_day_flow_id},'
             f'sign_count:{sign_count},'
@@ -231,7 +244,8 @@ class NZSigner:
             sd_id=self.sd_id,
             num=num,
             success_text=f'累计签到{sign_count}天礼包领取成功。',
-            error_prefix='领取累计签到礼包'
+            error_prefix='领取累计签到礼包',
+            no_package_name=True
         )
 
     def special_date_gift(self):
