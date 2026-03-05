@@ -4,6 +4,7 @@
 # Time:2025/9/9 14:30
 # File:signer.py
 import time
+import random
 
 from functools import wraps
 from datetime import datetime
@@ -31,7 +32,7 @@ class NZSigner:
             activity_id: str,
             flow_id: str,
             push_key: Optional[str] = None,
-            sd_id: Optional[str] = '8820a53e535dd3ce12edfeac13288eec',
+            sd_id: Optional[str] = ''.join(random.choices('0123456789abcdef', k=32)),
             special_date: Optional[list] = None,
             special_date_flow_id: Optional[str] = None,
             cumulative_day: Optional[list] = None,
