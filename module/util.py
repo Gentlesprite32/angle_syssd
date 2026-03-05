@@ -31,6 +31,35 @@ def safe_index(
         return None
 
 
+def mask_secret(
+        text: str,
+        start_idx: Optional[int] = None,
+        end_idx: Optional[int] = None
+) -> str:
+    if not isinstance(text, str) or not text:
+        return text
+
+    text_length = len(text)
+
+    # 设置默认值：隐藏中间部分（保留首尾各1/3）。
+    if start_idx is None:
+        start_idx = text_length // 3
+    if end_idx is None:
+        end_idx = text_length - text_length // 3
+
+    start_idx = max(0, min(start_idx, text_length))
+    end_idx = max(0, min(end_idx, text_length))
+
+    if start_idx > end_idx:
+        start_idx, end_idx = end_idx, start_idx
+
+    if start_idx == end_idx or text_length <= 3:
+        return text
+
+    # 返回隐藏后的字符串
+    return f'{text[:start_idx]}{"*" * (end_idx - start_idx)}{text[end_idx:]}'
+
+
 def sc_send(text, desp='', key='[SENDKEY]'):
     try:
         post_data = urllib.parse.urlencode({'text': text, 'desp': desp}).encode('utf-8')
@@ -40,7 +69,7 @@ def sc_send(text, desp='', key='[SENDKEY]'):
             result = response.read().decode('utf-8')
         return result
     except Exception as e:
-        log.error(f'推送失败!请检查key:{key}是否有效!原因:"{e}"')
+        log.error(f'推送失败!请检查key:{mask_secret(key)}是否有效!原因:"{e}"')
 
 
 def schedule_task(time_str: Union[str, list] = '00:00:00'):
