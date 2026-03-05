@@ -142,7 +142,7 @@ class NZSigner:
                 log.info(p)
                 console.log(p)
                 if no_package_name:
-                    if response_data.get('iRet', '') in ('600', '700'):  # 600:"对不起您已经领取过了",700:"签到天数不够哦"。
+                    if response_data.get('ret', '') in ('600', '700'):  # 600:"对不起您已经领取过了",700:"签到天数不够哦"。
                         return False
                     self.notify(text=success_text)
                     return True
