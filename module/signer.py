@@ -3,7 +3,6 @@
 # Software:PyCharm
 # Time:2025/9/9 14:30
 # File:signer.py
-import sys
 import time
 import random
 
@@ -37,7 +36,10 @@ class NZSigner:
             special_date: Optional[list] = None,
             special_date_flow_id: Optional[str] = None,
             cumulative_day: Optional[list] = None,
-            cumulative_day_flow_id: Optional[str] = None
+            cumulative_day_flow_id: Optional[str] = None,
+            version_gift_activity_id: Optional[str] = None,
+            version_gfit_play_flow_id: Optional[str] = None,
+            version_gift_share_flow_id: Optional[str] = None
     ):
         self.cookies = cookies
         self.session = requests.Session()
@@ -50,6 +52,9 @@ class NZSigner:
         self.special_date_flow_id = special_date_flow_id
         self.cumulative_day = cumulative_day
         self.cumulative_day_flow_id = cumulative_day_flow_id
+        self.version_gift_activity_id = version_gift_activity_id
+        self.version_gfit_play_flow_id = version_gfit_play_flow_id
+        self.version_gift_share_flow_id = version_gift_share_flow_id
 
     def update_cookies(self):
         """更新会话的Cookies"""
@@ -131,6 +136,10 @@ class NZSigner:
             package_name = response_data.get('modRet', {}).get('jData', {}).get('sPackageName', '')
             p = f'[{token_params.get("roleName", "")}][{token_params.get("areaName", "")}]:'
             if package_name and isinstance(package_name, str):
+                try:
+                    package_name = package_name.encode('latin1').decode('utf8')
+                except (UnicodeDecodeError, UnicodeEncodeError):
+                    pass
                 p += package_name
                 log.info(p)
                 console.log(p)
@@ -163,7 +172,7 @@ class NZSigner:
             self.notify(text='账号已失效。')
             return False
         except Exception as e:
-            log.error(f'{error_prefix}请求失败,原因"{e}"')
+            log.error(f'{error_prefix}请求失败,原因:"{e}"')
             self.notify(text=f'{error_prefix}失败,请查看运行日志。')
             return False
 
@@ -277,6 +286,32 @@ class NZSigner:
             error_prefix='领取限定日期礼包'
         )
 
+    def version_gift(self):
+        if not self.version_gift_activity_id:
+            log.debug('没有配置版本福利礼包的activity_id。')
+            return None
+        log.debug(f'获取到版本福利礼包activity_id:{self.version_gift_activity_id}')
+        if self.version_gfit_play_flow_id:
+            log.debug(f'获取到版本福利每日完成一局游戏的flow_id:{self.version_gfit_play_flow_id}')
+            self.request(
+                activity_id=self.version_gift_activity_id,
+                flow_id=self.version_gfit_play_flow_id,
+                sd_id=self.sd_id,
+                num='0',
+                success_text='版本福利每日完成一局游戏礼包领取成功。',
+                error_prefix='领取版本福利每日完成一局游戏礼包'
+            )
+        if self.version_gift_share_flow_id:
+            log.debug(f'获取到版本福利每日首次分活动的flow_id:{self.version_gift_share_flow_id}')
+            self.request(
+                activity_id=self.version_gift_activity_id,
+                flow_id=self.version_gift_share_flow_id,
+                sd_id=self.sd_id,
+                num='0',
+                success_text='版本福利分享礼包领取成功。',
+                error_prefix='领取版本福利每日首次分享活动礼包'
+            )
+
     @schedule_task(['00:00:00'])
     @check_current_date
     def sign(self):
@@ -288,3 +323,4 @@ class NZSigner:
             success_text='签到成功。',
             error_prefix='领取签到礼包'
         )
+        self.version_gift()
