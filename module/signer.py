@@ -118,7 +118,7 @@ class NZSigner:
             sd_id: str,
             num: str,
             success_text: str,
-            error_prefix: str,
+            gift_prefix: str,
             no_package_name: Optional[bool] = False
     ) -> bool:
         """发送请求并处理响应。"""
@@ -134,7 +134,7 @@ class NZSigner:
             response_data = res.json()
             log.info(response_data) if response_data else None
             package_name = response_data.get('modRet', {}).get('jData', {}).get('sPackageName', '')
-            p = f'[{token_params.get("roleName", "")}][{token_params.get("areaName", "")}]:'
+            p = f'{gift_prefix}:[{token_params.get("roleName", "")}][{token_params.get("areaName", "")}]:'
             if package_name and isinstance(package_name, str):
                 try:
                     package_name = package_name.encode('latin1').decode('utf8')
@@ -172,8 +172,8 @@ class NZSigner:
             self.notify(text='账号已失效。')
             return False
         except Exception as e:
-            log.error(f'{error_prefix}请求失败,原因:"{e}"')
-            self.notify(text=f'{error_prefix}失败,请查看运行日志。')
+            log.error(f'{gift_prefix}请求失败,原因:"{e}"')
+            self.notify(text=f'{gift_prefix}失败,请查看运行日志。')
             return False
 
     def get_sign_count(self) -> int:
@@ -263,7 +263,7 @@ class NZSigner:
             sd_id=self.sd_id,
             num=num,
             success_text=f'累计签到{sign_count}天礼包领取成功。',
-            error_prefix='领取累计签到礼包',
+            gift_prefix='领取累计签到礼包',
             no_package_name=True
         )
 
@@ -283,7 +283,7 @@ class NZSigner:
             sd_id=self.sd_id,
             num=num,
             success_text=f'{current_date}限定日期礼包领取成功。',
-            error_prefix='领取限定日期礼包'
+            gift_prefix='领取限定日期礼包'
         )
 
     def version_gift(self):
@@ -299,7 +299,7 @@ class NZSigner:
                 sd_id=self.sd_id,
                 num='0',
                 success_text='版本福利每日完成一局游戏礼包领取成功。',
-                error_prefix='领取版本福利每日完成一局游戏礼包'
+                gift_prefix='领取版本福利每日完成一局游戏礼包'
             )
         if self.version_gift_share_flow_id:
             log.debug(f'获取到版本福利每日首次分活动的flow_id:{self.version_gift_share_flow_id}')
@@ -309,7 +309,7 @@ class NZSigner:
                 sd_id=self.sd_id,
                 num='0',
                 success_text='版本福利分享礼包领取成功。',
-                error_prefix='领取版本福利每日首次分享活动礼包'
+                gift_prefix='领取版本福利每日首次分享活动礼包'
             )
 
     @schedule_task(['00:00:00'])
@@ -321,6 +321,6 @@ class NZSigner:
             sd_id=self.sd_id,
             num='-1',
             success_text='签到成功。',
-            error_prefix='领取签到礼包'
+            gift_prefix='领取签到礼包'
         )
         self.version_gift()
