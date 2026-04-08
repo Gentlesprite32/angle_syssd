@@ -217,17 +217,14 @@ class NZSigner:
         if not ret:
             return
 
-        try:
-            if isinstance(ret, int):
-                ret: str = str(ret)
-        except Exception:
-            raise
+        if isinstance(ret, int):
+            ret: str = str(ret)
 
         prompt: Union[str, None] = None
         if ret == '101':
             prompt: str = '请先登录。'
         elif ret == '99998':
-            prompt: str = '请先绑定大区后重新抓取COOKIES并填写。'
+            prompt: str = '请先绑定大区后重新获取COOKIES并填写。'
         elif ret == '300':
             prompt: str = '活动还未开始。'
         elif ret == '301':
