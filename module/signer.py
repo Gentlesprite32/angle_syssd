@@ -8,7 +8,10 @@ import random
 
 from functools import wraps
 from datetime import datetime
-from typing import Optional
+from typing import (
+    Union,
+    Optional
+)
 
 import requests
 import contextlib
@@ -80,7 +83,7 @@ class NZSigner:
             'num': num,
             'userId': token_params.get('userId', ''),
             'tokenId': token_params.get('token', ''),
-            'iActivityId': '',  # 由调用方填充
+            'iActivityId': '',  # 由调用方填充。
             'iFlowId': flow_id,
             'g_tk': '1842395457',
             'e_code': '0',
@@ -132,6 +135,7 @@ class NZSigner:
         try:
             res = self.session.post(url, headers=self.headers, data=data, verify=False)
             response_data = res.json()
+            self.check_ret(response_data.get('ret'))
             log.info(response_data) if response_data else None
             package_name = response_data.get('modRet', {}).get('jData', {}).get('sPackageName', '')
             p = f'{gift_prefix}:[{token_params.get("roleName", "")}][{token_params.get("areaName", "")}]:'
@@ -187,11 +191,7 @@ class NZSigner:
             res = self.session.post(url, headers=self.headers, data=data, verify=False)
             response_data = res.json()
             log.debug(response_data) if response_data else None
-            if response_data.get('ret') == '301':
-                p: str = '活动已结束。'
-                console.log(p)
-                self.notify(text=p)
-                raise SystemExit(-1)
+            self.check_ret(response_data.get('ret'))
             sign_data = response_data.get('failedRet')
             if not isinstance(sign_data, dict):  # 最后一个礼包领取成功。
                 return self.cumulative_day[-1]
@@ -212,6 +212,33 @@ class NZSigner:
         except Exception as e:
             log.error(f'无法获取累计签到天数,原因:"{e}"')
             return 0
+
+    def check_ret(self, ret: Union[str, int]) -> None:
+        if not ret:
+            return
+
+        try:
+            if isinstance(ret, int):
+                ret: str = str(ret)
+        except Exception:
+            raise
+
+        prompt: Union[str, None] = None
+        if ret == '101':
+            prompt: str = '请先登录。'
+        elif ret == '99998':
+            prompt: str = '请先绑定大区后重新抓取COOKIES并填写。'
+        elif ret == '300':
+            prompt: str = '活动还未开始。'
+        elif ret == '301':
+            prompt: str = '活动已结束。'
+
+        if not prompt:
+            return
+
+        console.log(prompt)
+        self.notify(text=prompt)
+        raise SystemExit(-1)
 
     @staticmethod
     def check_current_date(func):
