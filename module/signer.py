@@ -352,12 +352,17 @@ class NZSigner:
                 )
             )
 
+        roll_counts: int = roll_records.count(True)
+
+        if roll_counts == 0:
+            log.info('本次领取版本福利未获取到抽奖次数，不再抽取版本福利。')
+            return
+
         if self.version_gift_flow_id:
             success_text: str = '版本福利领取成功。'
-            success_times: int = roll_records.count(True)
-            log.info(f'本次获取抽奖次数:{success_times}次。')
+            log.info(f'本次获取抽奖次数:{roll_counts}次。')
             gift_records: list = []
-            for i in range(success_times):
+            for i in range(roll_counts):
                 gift_records.append(
                     self.request(
                         activity_id=self.version_gift_activity_id,
@@ -365,17 +370,22 @@ class NZSigner:
                         sd_id=self.sd_id,
                         num='0',
                         success_text=success_text,
-                        gift_prefix=f'[{i + 1}/{success_times}]领取版本福利礼包',
+                        gift_prefix=f'[{i + 1}/{roll_counts}]领取版本福利礼包',
                         is_success_notify=False
                     )
                 )
-                if i < success_times + 1:
+                if i < roll_counts - 1:
                     time.sleep(delay)
-            result = f'{gift_records.count(True)}/{success_times}'
-            p = f'版本福利领取结果:[{result}]。'
+            success_counts: int = gift_records.count(True)
+            p = f'版本福利领取结果:[{success_counts}/{roll_counts}]。'
             log.info(p)
             console.log(p)
-            self.notify(text=success_text, desp=result)
+
+            if success_counts == 0:
+                log.warning('没有资格抽取版本福利奖励。')
+                return
+
+            self.notify(text=success_text, desp=p)
 
     @schedule_task(['00:00:00'])
     @check_current_date
