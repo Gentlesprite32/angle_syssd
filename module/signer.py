@@ -41,7 +41,7 @@ class NZSigner:
             cumulative_day: Optional[list] = None,
             cumulative_day_flow_id: Optional[str] = None,
             version_gift_activity_id: Optional[str] = None,
-            version_gfit_play_flow_id: Optional[str] = None,
+            version_gift_play_flow_id: Optional[str] = None,
             version_gift_share_flow_id: Optional[str] = None
     ):
         self.cookies = cookies
@@ -56,7 +56,7 @@ class NZSigner:
         self.cumulative_day = cumulative_day
         self.cumulative_day_flow_id = cumulative_day_flow_id
         self.version_gift_activity_id = version_gift_activity_id
-        self.version_gfit_play_flow_id = version_gfit_play_flow_id
+        self.version_gfit_play_flow_id = version_gift_play_flow_id
         self.version_gift_share_flow_id = version_gift_share_flow_id
 
     def update_cookies(self):
