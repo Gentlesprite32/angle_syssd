@@ -42,7 +42,8 @@ class NZSigner:
             cumulative_day_flow_id: Optional[str] = None,
             version_gift_activity_id: Optional[str] = None,
             version_gift_play_flow_id: Optional[str] = None,
-            version_gift_share_flow_id: Optional[str] = None
+            version_gift_share_flow_id: Optional[str] = None,
+            version_gift_flow_id: Optional[str] = None
     ):
         self.cookies = cookies
         self.session = requests.Session()
@@ -58,6 +59,7 @@ class NZSigner:
         self.version_gift_activity_id = version_gift_activity_id
         self.version_gfit_play_flow_id = version_gift_play_flow_id
         self.version_gift_share_flow_id = version_gift_share_flow_id
+        self.version_gift_flow_id = version_gift_flow_id
 
     def update_cookies(self):
         """更新会话的Cookies"""
@@ -122,7 +124,8 @@ class NZSigner:
             num: str,
             success_text: str,
             gift_prefix: str,
-            no_package_name: Optional[bool] = False
+            no_package_name: Optional[bool] = False,
+            is_success_notify: Optional[bool] = True
     ) -> bool:
         """发送请求并处理响应。"""
         self.update_cookies()
@@ -147,7 +150,7 @@ class NZSigner:
                 p += package_name
                 log.info(p)
                 console.log(p)
-                self.notify(text=success_text, desp=package_name)
+                self.notify(text=success_text, desp=package_name) if is_success_notify else None
                 return True
 
             s_msg = response_data.get('flowRet', {}).get('sMsg')
@@ -160,7 +163,7 @@ class NZSigner:
                 if no_package_name:
                     if response_data.get('ret', '') in ('600', '700'):  # 600:"对不起您已经领取过了",700:"签到天数不够哦"。
                         return False
-                    self.notify(text=success_text)
+                    self.notify(text=success_text) if is_success_notify else None
                     return True
                 return False
 
@@ -190,7 +193,7 @@ class NZSigner:
 
             res = self.session.post(url, headers=self.headers, data=data, verify=False)
             response_data = res.json()
-            log.debug(response_data) if response_data else None
+            log.info(response_data) if response_data else None
             self.check_ret(response_data.get('ret'))
             sign_data = response_data.get('failedRet')
             if not isinstance(sign_data, dict):  # 最后一个礼包领取成功。
@@ -310,31 +313,69 @@ class NZSigner:
             gift_prefix='领取限定日期礼包'
         )
 
-    def version_gift(self):
+    def get_version_gift(
+            self,
+            delay: Optional[int] = 1
+    ):
         if not self.version_gift_activity_id:
-            log.debug('没有配置版本福利礼包的activity_id。')
+            log.info('没有配置版本福利礼包的activity_id。')
             return None
-        log.debug(f'获取到版本福利礼包activity_id:{self.version_gift_activity_id}')
+
+        roll_records: list = []
+        log.info(f'获取到版本福利礼包activity_id:"{self.version_gift_activity_id}"。')
+
         if self.version_gfit_play_flow_id:
-            log.debug(f'获取到版本福利每日完成一局游戏的flow_id:{self.version_gfit_play_flow_id}')
-            self.request(
-                activity_id=self.version_gift_activity_id,
-                flow_id=self.version_gfit_play_flow_id,
-                sd_id=self.sd_id,
-                num='0',
-                success_text='版本福利每日完成一局游戏礼包领取成功。',
-                gift_prefix='领取版本福利每日完成一局游戏礼包'
+            log.info(f'获取到版本福利每日完成一局游戏的flow_id:"{self.version_gfit_play_flow_id}"。')
+            roll_records.append(
+                self.request(
+                    activity_id=self.version_gift_activity_id,
+                    flow_id=self.version_gfit_play_flow_id,
+                    sd_id=self.sd_id,
+                    num='0',
+                    success_text='版本福利每日完成一局游戏礼包领取成功。',
+                    gift_prefix='领取版本福利每日完成一局游戏礼包',
+                    is_success_notify=False
+                )
             )
+
         if self.version_gift_share_flow_id:
-            log.debug(f'获取到版本福利每日首次分活动的flow_id:{self.version_gift_share_flow_id}')
-            self.request(
-                activity_id=self.version_gift_activity_id,
-                flow_id=self.version_gift_share_flow_id,
-                sd_id=self.sd_id,
-                num='0',
-                success_text='版本福利分享礼包领取成功。',
-                gift_prefix='领取版本福利每日首次分享活动礼包'
+            log.info(f'获取到版本福利每日首次分活动的flow_id:"{self.version_gift_share_flow_id}"。')
+            roll_records.append(
+                self.request(
+                    activity_id=self.version_gift_activity_id,
+                    flow_id=self.version_gift_share_flow_id,
+                    sd_id=self.sd_id,
+                    num='0',
+                    success_text='版本福利分享礼包领取成功。',
+                    gift_prefix='领取版本福利每日首次分享活动礼包',
+                    is_success_notify=False
+                )
             )
+
+        if self.version_gift_flow_id:
+            success_text: str = '版本福利领取成功。'
+            success_times: int = roll_records.count(True)
+            log.info(f'本次获取抽奖次数:{success_times}次。')
+            gift_records: list = []
+            for i in range(success_times):
+                gift_records.append(
+                    self.request(
+                        activity_id=self.version_gift_activity_id,
+                        flow_id=self.version_gift_flow_id,
+                        sd_id=self.sd_id,
+                        num='0',
+                        success_text=success_text,
+                        gift_prefix=f'[{i + 1}/{success_times}]领取版本福利礼包',
+                        is_success_notify=False
+                    )
+                )
+                if i < success_times + 1:
+                    time.sleep(delay)
+            result = f'{gift_records.count(True)}/{success_times}'
+            p = f'版本福利领取结果:[{result}]。'
+            log.info(p)
+            console.log(p)
+            self.notify(text=success_text, desp=result)
 
     @schedule_task(['00:00:00'])
     @check_current_date
@@ -347,4 +388,4 @@ class NZSigner:
             success_text='签到成功。',
             gift_prefix='领取签到礼包'
         )
-        self.version_gift()
+        self.get_version_gift()
