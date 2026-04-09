@@ -356,7 +356,7 @@ class NZSigner:
 
         if roll_counts == 0:
             log.info('本次领取版本福利未获取到抽奖次数，不再抽取版本福利。')
-            return
+            return None
 
         if self.version_gift_flow_id:
             success_text: str = '版本福利领取成功。'
@@ -383,7 +383,7 @@ class NZSigner:
 
             if success_counts == 0:
                 log.warning('没有资格抽取版本福利奖励。')
-                return
+                return None
 
             self.notify(text=success_text, desp=p)
 
