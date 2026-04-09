@@ -20,7 +20,8 @@ from config import (
     cumulative_day_flow_id,
     version_gift_activity_id,
     version_gift_play_flow_id,
-    version_gift_share_flow_id
+    version_gift_share_flow_id,
+    version_gift_flow_id
 )
 
 if __name__ == '__main__':
@@ -45,7 +46,8 @@ if __name__ == '__main__':
             cumulative_day_flow_id=cumulative_day_flow_id,
             version_gift_activity_id=version_gift_activity_id,
             version_gift_play_flow_id=version_gift_play_flow_id,
-            version_gift_share_flow_id=version_gift_share_flow_id
+            version_gift_share_flow_id=version_gift_share_flow_id,
+            version_gift_flow_id=version_gift_flow_id
         )
         signer.sign()
     except KeyboardInterrupt:
