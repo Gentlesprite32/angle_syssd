@@ -19,7 +19,7 @@ from config import (
     cumulative_day,
     cumulative_day_flow_id,
     version_gift_activity_id,
-    version_gfit_play_flow_id,
+    version_gift_play_flow_id,
     version_gift_share_flow_id
 )
 
@@ -44,7 +44,7 @@ if __name__ == '__main__':
             cumulative_day=cumulative_day,
             cumulative_day_flow_id=cumulative_day_flow_id,
             version_gift_activity_id=version_gift_activity_id,
-            version_gfit_play_flow_id=version_gfit_play_flow_id,
+            version_gift_play_flow_id=version_gift_play_flow_id,
             version_gift_share_flow_id=version_gift_share_flow_id
         )
         signer.sign()
