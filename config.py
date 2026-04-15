@@ -15,7 +15,7 @@ cumulative_day: list = [3, 5, 9, 15, 20, 25]
 cumulative_day_flow_id: str = '1197211'
 
 # 版本福利配置（可选）。
-version_gift_activity_id: Optional[str] = '882000'
-version_gift_play_flow_id: Optional[str] = '1193843'
-version_gift_share_flow_id: Optional[str] = '1193844'
-version_gift_flow_id: Optional[str] = '1193845'
+version_gift_activity_id: Optional[str] = None
+version_gift_play_flow_id: Optional[str] = None
+version_gift_share_flow_id: Optional[str] = None
+version_gift_flow_id: Optional[str] = None
