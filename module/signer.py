@@ -138,7 +138,7 @@ class NZSigner:
         try:
             res = self.session.post(url, headers=self.headers, data=data, verify=False)
             response_data = res.json()
-            self.check_ret(response_data.get('ret'))
+            self.check_ret(ret=response_data.get('ret'), raise_system_exit=False)
             log.info(response_data) if response_data else None
             package_name = response_data.get('modRet', {}).get('jData', {}).get('sPackageName', '')
             p = f'{gift_prefix}:[{token_params.get("roleName", "")}][{token_params.get("areaName", "")}]:'
@@ -194,7 +194,7 @@ class NZSigner:
             res = self.session.post(url, headers=self.headers, data=data, verify=False)
             response_data = res.json()
             log.info(response_data) if response_data else None
-            self.check_ret(response_data.get('ret'))
+            self.check_ret(ret=response_data.get('ret'), raise_system_exit=True)
             sign_data = response_data.get('failedRet')
             if not isinstance(sign_data, dict):  # 最后一个礼包领取成功。
                 return self.cumulative_day[-1]
@@ -216,7 +216,11 @@ class NZSigner:
             log.error(f'无法获取累计签到天数,原因:"{e}"')
             return 0
 
-    def check_ret(self, ret: Union[str, int]) -> None:
+    def check_ret(
+            self,
+            ret: Union[str, int],
+            raise_system_exit: bool = False
+    ) -> None:
         if not ret:
             return
 
@@ -238,7 +242,9 @@ class NZSigner:
 
         console.log(prompt)
         self.notify(text=prompt)
-        raise SystemExit(-1)
+
+        if raise_system_exit:
+            raise SystemExit(-1)
 
     @staticmethod
     def check_current_date(func):
