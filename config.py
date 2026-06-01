@@ -6,13 +6,13 @@
 import random
 from typing import Optional
 
-activity_id: str = '920173'
-flow_id: str = '1206535'
+activity_id: str = '925755'
+flow_id: str = '1212133'
 sd_id: str = ''.join(random.choices('0123456789abcdef', k=32))
 special_date: list = ['2026-05-08', '2026-05-15', '2026-05-22', '2026-05-30']
-special_date_flow_id: str = '1206539'
+special_date_flow_id: str = '1212132'
 cumulative_day: list = [3, 5, 9, 15, 20, 25]
-cumulative_day_flow_id: str = '1206534'
+cumulative_day_flow_id: str = '1212138'
 
 # 版本福利配置（可选）。
 version_gift_activity_id: Optional[str] = '924173'
