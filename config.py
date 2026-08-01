@@ -6,10 +6,10 @@
 import random
 from typing import Optional
 
-activity_id: str = '942812'  # 签到活动ID。
-flow_id: str = '1221507'  # 签到礼包。
+activity_id: str = '1001016'  # 签到活动ID。
+flow_id: str = '1240458'  # 签到礼包。
 sd_id: str = ''.join(random.choices('0123456789abcdef', k=32))
-special_date: list = ['2026-07-04', '2026-07-11', '2026-07-18', '2026-07-25']
+special_date: list = ['2026-08-07', '2026-08-14', '2026-08-21', '2026-08-28']
 special_date_flow_id: str = str(int(flow_id) + 5)  # 限定日期礼包。
 cumulative_day: list = [3, 5, 9, 15, 20, 25]
 cumulative_day_flow_id: str = str(int(flow_id) - 1)  # 累计签到礼包。
